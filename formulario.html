@@ -138,84 +138,138 @@
 </div>
 
 <script>
-  // Função para capturar o gênero
-  function getGenero() {
-    const selecionado = document.querySelector('input[name="genero"]:checked');
-    if (!selecionado) return '';
-    if (selecionado.value === 'Outro') {
-      const outroValor = document.getElementById('genero_outro_box').value.trim();
-      return outroValor || 'Outro';
-    }
-    return selecionado.value;
+ // Função para capturar o gênero
+function getGenero() {
+  const selecionado = document.querySelector('input[name="genero"]:checked');
+  if (!selecionado) return 'NaN';
+  if (selecionado.value === 'Outro') {
+    const outroValor = document.getElementById('genero_outro_box').value.trim();
+    return outroValor || 'Outro';
   }
+  return selecionado.value;
+}
 
-  // Mostrar/ocultar campos adicionais
-  document.querySelectorAll('input[type=radio]').forEach(radio => {
-    radio.addEventListener('change', e => {
-      const targetId = e.target.dataset.target;
-      if(targetId) {
-        const target = document.getElementById(targetId);
-        if(e.target.value === 'Sim' || e.target.value === 'Outro') {
-          target.style.display = 'block';
-        } else {
-          target.style.display = 'none';
-          target.querySelectorAll('input').forEach(inp => inp.value='');
-        }
+// Mostrar/ocultar campos adicionais
+document.querySelectorAll('input[type=radio]').forEach(radio => {
+  radio.addEventListener('change', e => {
+    const targetId = e.target.dataset.target;
+    if(targetId) {
+      const target = document.getElementById(targetId);
+      if(e.target.value === 'Sim' || e.target.value === 'Outro') {
+        target.style.display = 'block';
+      } else {
+        target.style.display = 'none';
+        target.querySelectorAll('input').forEach(inp => inp.value='');
       }
-    });
-  });
-
-  // Mostrar campo "Outro gênero"
-  const generoRadio = document.getElementById('genero_outro_radio');
-  const generoInput = document.getElementById('genero_outro_box');
-  generoRadio.addEventListener('change', ()=> generoInput.style.display='inline-block');
-  document.querySelectorAll('input[name="genero"]').forEach(r=>{
-    if(r!==generoRadio) r.addEventListener('change', ()=> generoInput.style.display='none');
-  });
-
-  // Captura do nome da query string
-  const params = new URLSearchParams(window.location.search);
-  const nomeQuery = params.get('nome') || '';
-  document.getElementById('saudacao').textContent = `Olá, ${nomeQuery}! Por gentileza, complete as informações abaixo:`;
-  document.getElementById('nome').value = nomeQuery;
-
-  // Função para salvar dados no localStorage
-  function salvarDados() {
-    const nome = document.getElementById('nome').value.trim();
-    const dataNasc = document.getElementById('data_nasc').value;
-    const genero = getGenero();
-
-    // Calcular idade
-    let idade = 'NaN';
-    if(dataNasc) {
-      const today = new Date();
-      const birthDate = new Date(dataNasc);
-      idade = today.getFullYear() - birthDate.getFullYear();
-      const m = today.getMonth() - birthDate.getMonth();
-      if(m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) idade--;
     }
+  });
+});
 
+// Mostrar campo "Outro gênero"
+const generoRadio = document.getElementById('genero_outro_radio');
+const generoInput = document.getElementById('genero_outro_box');
+generoRadio.addEventListener('change', ()=> generoInput.style.display='inline-block');
+document.querySelectorAll('input[name="genero"]').forEach(r=>{
+  if(r!==generoRadio) r.addEventListener('change', ()=> generoInput.style.display='none');
+});
+
+// Captura do nome da query string
+const params = new URLSearchParams(window.location.search);
+const nomeQuery = params.get('nome') || '';
+document.getElementById('saudacao').textContent = `Olá, ${nomeQuery}! Por gentileza, complete as informações abaixo:`;
+document.getElementById('nome').value = nomeQuery;
+
+// Função para salvar dados no localStorage
+function salvarDados() {
+  const nome = document.getElementById('nome').value.trim() || 'NaN';
+  const dataNasc = document.getElementById('data_nasc').value || 'NaN';
+  const genero = getGenero();
+
+  // Calcular idade
+  let idade = 'NaN';
+  if(dataNasc && dataNasc !== 'NaN') {
     const today = new Date();
-    const formattedDate = `${today.getFullYear()}-${(today.getMonth()+1).toString().padStart(2,'0')}-${today.getDate().toString().padStart(2,'0')}`;
-
-    localStorage.setItem('participantName', nome);
-    localStorage.setItem('participantAge', idade);
-    localStorage.setItem('participantGender', genero);
-    localStorage.setItem('testDate', formattedDate);
+    const birthDate = new Date(dataNasc);
+    idade = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if(m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) idade--;
   }
 
-  // Enviar formulário
-  document.getElementById('participante-form').addEventListener('submit', e=>{
-    e.preventDefault(); // Evita recarregar a página
-    salvarDados();
-    alert('Dados salvos com sucesso!');
+  const today = new Date();
+  const formattedDate = `${today.getFullYear()}-${(today.getMonth()+1).toString().padStart(2,'0')}-${today.getDate().toString().padStart(2,'0')}`;
+
+  localStorage.setItem('participantName', nome);
+  localStorage.setItem('participantAge', idade);
+  localStorage.setItem('participantGender', genero);
+  localStorage.setItem('testDate', formattedDate);
+
+  return {nome, data_nasc: dataNasc, idade, genero, testDate: formattedDate};
+}
+
+// Função para gerar CSV
+function gerarCSV() {
+  const form = document.getElementById('participante-form');
+  const data = {};
+
+  form.querySelectorAll('input, textarea').forEach(input => {
+    if(input.type === 'radio') {
+      if(input.checked){
+        if(input.value==='Outro' && input.name==='genero'){
+          const outro = document.getElementById('genero_outro_box').value.trim();
+          data[input.name] = outro || 'Outro';
+        } else {
+          data[input.name] = input.value;
+        }
+      } else {
+        if(!(input.name in data)) data[input.name] = 'NaN';
+      }
+    } else {
+      data[input.name] = input.value.trim() || 'NaN';
+    }
   });
 
-  // Botão DASS-21
-  document.getElementById('btn-dass').addEventListener('click', () => {
-    salvarDados();
-    window.location.href = 'dass21.html';
-  });
+  // Calcula idade
+  let idade = 'NaN';
+  if(data['data_nasc'] && data['data_nasc'] !== 'NaN'){
+    const today = new Date();
+    const birthDate = new Date(data['data_nasc']);
+    idade = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if(m < 0 || (m===0 && today.getDate() < birthDate.getDate())) idade--;
+  }
+  data['idade'] = idade;
+
+  // Monta CSV
+  const keys = Object.keys(data);
+  const values = keys.map(k => `"${data[k]}"`);
+  const csvContent = keys.join(',') + '\n' + values.join(',');
+
+  // Cria link de download
+  const blob = new Blob([csvContent], {type: 'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${data['nome'] || 'participante'}_anamnese.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+// Enviar formulário
+document.getElementById('participante-form').addEventListener('submit', e=>{
+  e.preventDefault(); // Evita recarregar a página
+  salvarDados();
+  gerarCSV();
+  alert('Dados salvos e CSV gerado com sucesso!');
+});
+
+// Botão DASS-21
+document.getElementById('btn-dass').addEventListener('click', () => {
+  salvarDados();
+  gerarCSV();
+  window.location.href = 'dass21.html';
+});
+
 </script>
 </body>
 </html>
