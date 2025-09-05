@@ -131,13 +131,24 @@
 
     <div style="display: flex; gap: 15px; margin-top: 25px;">
       <button type="submit">Enviar</button>
-      <button type="button" onclick="window.location.href='dass21.html'">DASS-21</button>
+      <button type="button" id="btn-dass">DASS-21</button>
     </div>
     
   </form>
 </div>
 
 <script>
+  // Função para capturar o gênero
+  function getGenero() {
+    const selecionado = document.querySelector('input[name="genero"]:checked');
+    if (!selecionado) return '';
+    if (selecionado.value === 'Outro') {
+      const outroValor = document.getElementById('genero_outro_box').value.trim();
+      return outroValor || 'Outro';
+    }
+    return selecionado.value;
+  }
+
   // Mostrar/ocultar campos adicionais
   document.querySelectorAll('input[type=radio]').forEach(radio => {
     radio.addEventListener('change', e => {
@@ -148,8 +159,7 @@
           target.style.display = 'block';
         } else {
           target.style.display = 'none';
-          const inputs = target.querySelectorAll('input');
-          inputs.forEach(inp => inp.value='');
+          target.querySelectorAll('input').forEach(inp => inp.value='');
         }
       }
     });
@@ -165,43 +175,47 @@
 
   // Captura do nome da query string
   const params = new URLSearchParams(window.location.search);
-  const nome = params.get('nome') || '';
-  document.getElementById('saudacao').textContent = `Olá, ${nome}! Por gentileza, complete as informações abaixo:`;
-  document.getElementById('nome').value = nome;
+  const nomeQuery = params.get('nome') || '';
+  document.getElementById('saudacao').textContent = `Olá, ${nomeQuery}! Por gentileza, complete as informações abaixo:`;
+  document.getElementById('nome').value = nomeQuery;
 
-  // Função para salvar CSV
-  document.getElementById('participante-form').addEventListener('submit', function(e){
-    e.preventDefault(); // evita reload da página
+  // Função para salvar dados no localStorage
+  function salvarDados() {
+    const nome = document.getElementById('nome').value.trim();
+    const dataNasc = document.getElementById('data_nasc').value;
+    const genero = getGenero();
 
-    const form = e.target;
-    const data = {};
+    // Calcular idade
+    let idade = 'NaN';
+    if(dataNasc) {
+      const today = new Date();
+      const birthDate = new Date(dataNasc);
+      idade = today.getFullYear() - birthDate.getFullYear();
+      const m = today.getMonth() - birthDate.getMonth();
+      if(m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) idade--;
+    }
 
-    form.querySelectorAll('input, textarea').forEach(input => {
-        // Se estiver vazio, coloca NaN
-        if(input.type === 'radio') {
-            // Para radios, pega o selecionado
-            const selected = form.querySelector(`input[name="${input.name}"]:checked`);
-            data[input.name] = selected ? selected.value : "NaN";
-        } else {
-            data[input.name] = input.value ? input.value : "NaN";
-        }
-    });
+    const today = new Date();
+    const formattedDate = `${today.getFullYear()}-${(today.getMonth()+1).toString().padStart(2,'0')}-${today.getDate().toString().padStart(2,'0')}`;
 
-    // Cria CSV
-    const headers = Object.keys(data).join(',');
-    const values = Object.values(data).join(',');
-    const csvContent = headers + "\n" + values;
+    localStorage.setItem('participantName', nome);
+    localStorage.setItem('participantAge', idade);
+    localStorage.setItem('participantGender', genero);
+    localStorage.setItem('testDate', formattedDate);
+  }
 
-    // Cria download
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = (form.nome.value || "participante") + "_dados.csv";
-    link.style.display = 'none';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-});
+  // Enviar formulário
+  document.getElementById('participante-form').addEventListener('submit', e=>{
+    e.preventDefault(); // Evita recarregar a página
+    salvarDados();
+    alert('Dados salvos com sucesso!');
+  });
+
+  // Botão DASS-21
+  document.getElementById('btn-dass').addEventListener('click', () => {
+    salvarDados();
+    window.location.href = 'dass21.html';
+  });
 </script>
 </body>
 </html>
